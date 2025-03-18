@@ -31,6 +31,7 @@ class DictClient {
                 return false;
             }
             _conn->send(msg);
+            return true;
         }
     
     private:
