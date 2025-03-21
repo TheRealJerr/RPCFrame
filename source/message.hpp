@@ -368,12 +368,7 @@ namespace rpcframe
                 return false;
             }
 
-            if(body()[KEY_RESULT].isNull() || 
-                body()[KEY_RESULT].isObject() == false)
-            {
-                ELOG("响应中没有结果");
-                return false;
-            }
+            
             return true;
         }
 
@@ -415,6 +410,16 @@ namespace rpcframe
                 addrs.push_back({body()[KEY_HOST][i][KEY_HOST_IP].asString(),body()[KEY_HOST][i][KEY_HOST_PORT].asInt()});
             return addrs;
         }
+
+        ServiceOpType serviceOpType()
+        {
+            return (ServiceOpType)body()[KEY_OP_TYPE].asInt();
+        }
+
+        void setServiceOpType(ServiceOpType opt)
+        {
+            body()[KEY_OP_TYPE] = (int)opt;
+        }
     private:
     };
     
@@ -425,24 +430,30 @@ namespace rpcframe
     class MessageFactory
     {
     public:
-        static BaseMessage::Ptr create(Mtype type)
+        // static BaseMessage::Ptr create(Mtype type)
+        // {
+        //     switch (type)
+        //     {
+        //         case Mtype::REQ_RPC:
+        //             return std::make_shared<RpcRequest>();
+        //         case Mtype::RSP_RPC:
+        //             return std::make_shared<RpcResponse>();
+        //         case Mtype::REQ_TOP:
+        //             return std::make_shared<TopicRequest>();
+        //         case Mtype::RSP_TOP:
+        //             return std::make_shared<TopicResponse>();
+        //         case Mtype::REQ_SERVICE:
+        //             return std::make_shared<ServiceRequest>();
+        //         case Mtype::RSP_SERVICE:
+        //             return std::make_shared<ServiceResponse>();
+        //     }
+        //     return nullptr;
+        // }
+        // 智能指针不需要手动析构
+        template <class T,class ...Args>
+        static std::shared_ptr<T> create(Args&&... args)
         {
-            switch (type)
-            {
-                case Mtype::REQ_RPC:
-                    return std::make_shared<RpcRequest>();
-                case Mtype::RSP_RPC:
-                    return std::make_shared<RpcResponse>();
-                case Mtype::REQ_TOP:
-                    return std::make_shared<TopicRequest>();
-                case Mtype::RSP_TOP:
-                    return std::make_shared<TopicResponse>();
-                case Mtype::REQ_SERVICE:
-                    return std::make_shared<ServiceRequest>();
-                case Mtype::RSP_SERVICE:
-                    return std::make_shared<ServiceResponse>();
-            }
-            return nullptr;
+            return std::make_shared<T>(std::forward<Args>(args)...);
         }
     };
 }
