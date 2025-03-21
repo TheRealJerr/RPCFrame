@@ -36,11 +36,11 @@ namespace rpcframe
     // 返回的状态码
     enum class RCode
     {
-        RCODE_OK = 0,
-        RCODE_PARSE_FAILED,
-        RCODE_DISCONNECTED,
-        RCODE_INVALID_MSG,
-        RCODE_INVALID_PARAMS,
+        RCODE_OK = 0, // 成功
+        RCODE_PARSE_FAILED, // 解析失败
+        RCODE_DISCONNECTED,  // 连接断开 
+        RCODE_INVALID_MSG, // 无效的信息
+        RCODE_INVALID_PARAMS,  
         RCODE_NOT_FIND_SEVIVE,
         RCODE_INVALID_OPTYPE,
         RCODE_NOT_FIND_TOPIC,
@@ -63,4 +63,31 @@ namespace rpcframe
         if(it == err_map.end()) return "未知错误";
         else return it->second;
     } 
+
+    // RPC请求类型
+    enum class RType
+    {
+        // 同步请求
+        REQ_SYNC = 0,
+        REQ_ASYNC,
+        REQ_CALLBACK,
+    };
+
+    // 主题的操作类型定义
+    enum class TopicOptType
+    {
+        TOPIC_CREATE = 0,
+        TOPIC_REMOVE,
+        TOPIC_SUBCRIBE,
+        TOPIC_CANCEL,
+        TOPIC_PUBLISH,
+    };
+    // 服务的上线和下线服务的注册和下线
+    enum class ServiceOpType
+    {
+        SERVICE_REGISTY = 0,
+        SERVICE_DISCOVERY,
+        SERVICE_ONLINE,
+        SERVICE_OFFLINE,
+    };
 }
