@@ -46,6 +46,7 @@ namespace rpcframe
         RCODE_NOT_FIND_TOPIC,
     };
 
+    // 通过建立hash映射来进行映射错误
     static std::string errorCode(RCode code)
     {
         static std::unordered_map<RCode,std::string> err_map = 
