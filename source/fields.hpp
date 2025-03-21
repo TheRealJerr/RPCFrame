@@ -19,7 +19,8 @@ namespace rpcframe
     #define KEY_HOST_PORT "port"
     // 状态码
     #define KEY_RCODE "rcode"
-
+    // 定义结果
+    #define KEY_RESULT "result"
     // req和req的类型  -- 根据我们的功能进行划分
     enum class Mtype
     {
@@ -29,8 +30,8 @@ namespace rpcframe
         REQ_TOP,
         RSP_TOP,
         //
-        REQ_SEVICE,
-        RSP_SEVICE,
+        REQ_SERVICE,
+        RSP_SERVICE,
     };
 
     // 返回的状态码

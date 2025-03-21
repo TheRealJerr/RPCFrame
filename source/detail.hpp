@@ -25,7 +25,7 @@
 #define LDFAULT LDBG
 
 std::mutex global_log_lock;
-
+// 定义日志字段
 #define LOG(level, format, ...)                                                                 \
     {                                                                                           \
         std::unique_lock<std::mutex>                                                            \
