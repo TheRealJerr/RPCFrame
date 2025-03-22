@@ -70,7 +70,7 @@ namespace rpcframe
         virtual bool canProcessed(const BaseBuffer::Ptr&) = 0;
 
         // 这里有潜在的悬空的问题 --debug
-        virtual bool onMessage(const BaseBuffer::Ptr&,BaseBuffer::Ptr&) = 0;
+        virtual bool onMessage(const BaseBuffer::Ptr&,BaseMessage::Ptr&) = 0;
 
         virtual std::string serialize(const BaseMessage::Ptr&) = 0;
     private:
@@ -97,7 +97,7 @@ namespace rpcframe
 
     using ConnectionCallBack = std::function<void(const BaseConnection::Ptr&)>;
     using CloseCallBack = std::function<void(const BaseConnection::Ptr&)>;
-    using MessageCallBack = std::function<void(const BaseConnection::Ptr&,BaseBuffer::Ptr&)>;
+    using MessageCallBack = std::function<void(const BaseConnection::Ptr&,BaseMessage::Ptr&)>;
 
     
     class BaseServer
@@ -114,7 +114,7 @@ namespace rpcframe
 
         // 启动服务器
         virtual void start() = 0;
-    private:
+    protected:
         ConnectionCallBack _cnc_call_back;
         CloseCallBack _cls_call_back;
         MessageCallBack _msg_call_back;
@@ -141,12 +141,12 @@ namespace rpcframe
         // 启动服务器
         virtual void connect() = 0;
         virtual void shutdown() = 0;
-        virtual void send(const BaseMessage::Ptr&) = 0;
+        virtual bool send(const BaseMessage::Ptr&) = 0;
         // 获取连接
         virtual BaseConnection::Ptr connection() = 0;
 
         virtual bool connected() const = 0;
-    private:
+    protected:
         ConnectionCallBack _cnc_call_back;
         CloseCallBack _cls_call_back;
         MessageCallBack _msg_call_back;

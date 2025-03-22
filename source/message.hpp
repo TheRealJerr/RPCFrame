@@ -430,26 +430,26 @@ namespace rpcframe
     class MessageFactory
     {
     public:
-        // static BaseMessage::Ptr create(Mtype type)
-        // {
-        //     switch (type)
-        //     {
-        //         case Mtype::REQ_RPC:
-        //             return std::make_shared<RpcRequest>();
-        //         case Mtype::RSP_RPC:
-        //             return std::make_shared<RpcResponse>();
-        //         case Mtype::REQ_TOP:
-        //             return std::make_shared<TopicRequest>();
-        //         case Mtype::RSP_TOP:
-        //             return std::make_shared<TopicResponse>();
-        //         case Mtype::REQ_SERVICE:
-        //             return std::make_shared<ServiceRequest>();
-        //         case Mtype::RSP_SERVICE:
-        //             return std::make_shared<ServiceResponse>();
-        //     }
-        //     return nullptr;
-        // }
-        // 智能指针不需要手动析构
+        static BaseMessage::Ptr create(Mtype type)
+        {
+            switch (type)
+            {
+                case Mtype::REQ_RPC:
+                    return std::make_shared<RpcRequest>();
+                case Mtype::RSP_RPC:
+                    return std::make_shared<RpcResponse>();
+                case Mtype::REQ_TOP:
+                    return std::make_shared<TopicRequest>();
+                case Mtype::RSP_TOP:
+                    return std::make_shared<TopicResponse>();
+                case Mtype::REQ_SERVICE:
+                    return std::make_shared<ServiceRequest>();
+                case Mtype::RSP_SERVICE:
+                    return std::make_shared<ServiceResponse>();
+            }
+            return nullptr;
+        }
+        //智能指针不需要手动析构
         template <class T,class ...Args>
         static std::shared_ptr<T> create(Args&&... args)
         {
