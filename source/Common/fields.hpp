@@ -45,6 +45,7 @@ namespace rpcframe
         RCODE_NOT_FIND_SEVIVE,
         RCODE_INVALID_OPTYPE,
         RCODE_NOT_FIND_TOPIC,
+        RCODE_INTERNAL_ERR,// 服务端的内部错误
     };
 
     // 通过建立hash映射来进行映射错误

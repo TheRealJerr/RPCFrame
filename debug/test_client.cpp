@@ -4,7 +4,8 @@
 void onMessage(const rpcframe::BaseConnection::Ptr& con,rpcframe::BaseMessage::Ptr& msg)
 {
     std::string body = msg->serialize();
-    std::cout << body << std::endl;
+    std::cout << body << std::endl; 
+    
 }
 
 int main()
@@ -21,6 +22,8 @@ int main()
     val["num2"] = 2;
     rpc_req->setParams(val);
     if(client->send(rpc_req)) DLOG("发送成功");
+    rpc_req->setMtype(rpcframe::Mtype::REQ_TOP);
+    client->send(rpc_req);
     //if(client->send(rpc_req)) DLOG("发送成功");
     std::this_thread::sleep_for(std::chrono::seconds(10));
     client->shutdown();
