@@ -14,7 +14,7 @@ namespace rpcframe
 
         class Requestor
         {
-        private:
+        public:
             using AsyncResponse = std::future<BaseMessage::Ptr>;
             using RequestCallBack = std::function<void(BaseMessage::Ptr &)>;
             class RequestDescribe
@@ -45,16 +45,17 @@ namespace rpcframe
                 {
                     // 异步处理
                     describe->response.set_value(msg);
-                    return;
                 }else if(describe->type == RType::REQ_CALLBACK)
                 {
                     // 收到消息,调用回调函数
                     describe->_req_call_back(msg);
-                    return;
                 }
                 else{
                     ELOG("请求类型位置");
                 }
+                // 描述结束，删除对应的描述
+                // 我们已经设置了值，就算std::promise被析构了，std::future在外部仍然可以直接获取到值
+                delDescribe(rid);
             }
             // 发送消息
             // 并且告诉返回之后你该怎么做
