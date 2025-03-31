@@ -1,4 +1,5 @@
 #pragma once
+// 这个头文件的目的是封装消息的派发
 #include "requestor.hpp"
 
 namespace rpcframe

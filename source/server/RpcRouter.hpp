@@ -112,7 +112,7 @@ namespace rpcframe
         class ServiceFactory
         {
         public:
-            static ServiceDescribe::Ptr create(); // 构建描述信息交由内部进行管理
+            // static ServiceDescribe::Ptr create(); // 构建描述信息交由内部进行管理
             void setRetType(VType type) { _ret_type = type; }
             void setParams(const std::string& name,VType type)
             {
