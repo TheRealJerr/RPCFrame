@@ -40,8 +40,11 @@ namespace rpcframe
                 // 判断描述的参数字段是否存在,类型是否一致
                 for (auto &descri : _paras_check)
                 {
-                    if (val.isMember(descri.first))
+                    if (!val.isMember(descri.first))
                     {
+                        std::string tmp;
+                        JsonTools::serialize(val,tmp);
+                        // std::cout <<  tmp << std::endl;
                         ELOG("字段缺失:%s", descri.first.c_str());
                         return false;
                     }

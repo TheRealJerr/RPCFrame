@@ -52,6 +52,7 @@ namespace rpcframe
             {
                 std::unique_lock<std::mutex> lock(_mtx);
                 // 注册新的功能
+                ELOG("注册新的功能:%s",typeid(T).name());
                 auto cb = std::make_shared<CallBackDerive<T>>(handler);
                 _handlers.insert(std::make_pair(type,cb));
             }

@@ -106,7 +106,7 @@ namespace rpcframe
             if (canProcessed(buf) == false)
                 return false;
             // 调用onMessage,默认缓冲区内容足够处理
-            std::cout << "size : " << buf->readAbleSize() << std::endl;
+            // std::cout << "size : " << buf->readAbleSize() << std::endl;
             int32_t total_len = buf->readInt32();
             Mtype m_type = (Mtype)buf->readInt32();
             int32_t id_len = buf->readInt32();
@@ -156,7 +156,7 @@ namespace rpcframe
             result.append((char *)&n_id_len, idlenSize);
             result.append(id);
             result.append(body);
-            DLOG("%d",(int)result.size());
+            // DLOG("%d",(int)result.size());
             return result;
         }
 
@@ -189,7 +189,6 @@ namespace rpcframe
         virtual void send(const BaseMessage::Ptr &msg) override
         {
             std::string send_msg = _protocal->serialize(msg);
-            
             _conn->send(send_msg);
         }
 
@@ -402,8 +401,8 @@ namespace rpcframe
             if (conn->connected())
             {
                 ELOG("连接建立成功");
-                _countdownlatch.countDown();
                 _conn = ConnectionFactory::create(conn,_protocal);
+                _countdownlatch.countDown();
             }
             else
             {
