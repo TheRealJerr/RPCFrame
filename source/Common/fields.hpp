@@ -92,5 +92,6 @@ namespace rpcframe
         SERVICE_DISCOVERY,
         SERVICE_ONLINE,
         SERVICE_OFFLINE,
+        SERVICE_UNKOWN,
     };
 }

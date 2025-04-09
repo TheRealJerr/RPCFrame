@@ -81,6 +81,20 @@ namespace rpcframe
                 // 方法 -> 主机映射添加
             }
             // 当断开连接的时候，获取他的信息，进行通知
+            std::vector<Address_t> methodHosts(const std::string& method)
+            {
+                // 得到对应的d
+                std::unique_lock<std::mutex> lock(_mtx);
+                auto it = _providers.find(method);
+                if(it == _providers.end())
+                    return {};
+                std::vector<Address_t> ret;
+                for(auto& provider : it->second)
+                {
+                    ret.push_back(provider->_host);
+                }
+                return ret;
+            }
             Provider::Ptr getProvider(const BaseConnection::Ptr &con)
             {
                 std::unique_lock<std::mutex> lock(_mtx);
@@ -199,15 +213,90 @@ namespace rpcframe
         public:
             using Ptr = std::shared_ptr<PDManager>;
 
-            PDManager() {}
+            PDManager():
+                _providers(std::make_shared<ProviderManager>()),
+                _discoverys(std::make_shared<DiscoverManager>())
+            {}
             void onServiceRequest(const BaseConnection::Ptr &con, const ServiceRequest::Ptr &msg)
             {
+                ServiceOpType opt_type = msg->serviceOptType();
+                // 服务操作请求,服务注册/服务发现
+                // 1. 新增服务提供者, 进行服务发现的通知
+                if(opt_type == ServiceOpType::SERVICE_REGISTY)
+                {
+                    _providers->addProvider(con,msg->address(),msg->method());
+                    _discoverys->onlineNotify(msg->method(),msg->address()); // 上限通知
+                    return rigisterResponse(con,msg);
+                }
+                // 2. 新增的服务发现
+                else if(opt_type == ServiceOpType::SERVICE_DISCOVERY)
+                {
+                    _discoverys->addDiscovery(con,msg->method());
+                    return discoverResponse(con,msg);
+                }
+                else
+                {
+                    // 错误的消息
+                    errorResponse(con,msg);
+                    ELOG("收到服务操作请求,操作类型错误");
+                }
             }
 
             void onConnectionShutDown(const BaseConnection::Ptr &con)
             {
+                // 连接关闭的回调函数
+                auto provider = _providers->getProvider(con);
+                if(provider.get())
+                {
+                    // 他就是一个服务提供者
+                    for(auto& method : provider->_mothods)
+                    {
+                        _discoverys->offlineNotify(method,provider->_host);
+                    }
+                    _providers->delProvider(con);
+                }
+                
+                _discoverys->delDiscovery(con);
+            }
+        private:
+            void rigisterResponse(const BaseConnection::Ptr &con, const ServiceRequest::Ptr &msg)
+            {
+                auto msg_rsp = MessageFactory::create<ServiceResponse>();
+                msg_rsp->setId(msg->rid());
+                msg_rsp->setMtype(Mtype::RSP_SERVICE);
+                msg_rsp->setRCode(RCode::RCODE_OK);
+                msg_rsp->setServiceOpType(ServiceOpType::SERVICE_REGISTY);
+                con->send(msg_rsp);
             }
 
+            void discoverResponse(const BaseConnection::Ptr &con, const ServiceRequest::Ptr &msg)
+            {
+
+                auto msg_rsp = MessageFactory::create<ServiceResponse>();
+                msg_rsp->setId(msg->rid());
+                msg_rsp->setMtype(Mtype::RSP_SERVICE);
+                msg_rsp->setServiceOpType(ServiceOpType::SERVICE_DISCOVERY);
+                auto hosts = _providers->methodHosts(msg->method());
+                if(hosts.empty())
+                {
+                    msg_rsp->setRCode(RCode::RCODE_NOT_FIND_SEVIVE);
+                    return con->send(msg_rsp);
+                }
+                msg_rsp->setRCode(RCode::RCODE_OK);
+                msg_rsp->setMethod(msg->method());
+                msg_rsp->setHost(hosts);
+                con->send(msg_rsp);
+            }
+
+            void errorResponse(const BaseConnection::Ptr& con,const ServiceRequest::Ptr& msg)
+            {
+                auto msg_rsp = MessageFactory::create<ServiceResponse>();
+                msg_rsp->setId(msg->rid());
+                msg_rsp->setMtype(Mtype::RSP_SERVICE);
+                msg_rsp->setRCode(RCode::RCODE_INVALID_MSG);
+                msg_rsp->setServiceOpType(ServiceOpType::SERVICE_UNKOWN);
+                con->send(msg_rsp);
+            }
         private:
             ProviderManager::Ptr _providers;
             DiscoverManager::Ptr _discoverys;
