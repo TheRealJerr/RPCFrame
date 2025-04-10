@@ -146,7 +146,35 @@ namespace rpcframe
             }
             // dispather调用
             void onServiceRequstor(const BaseConnection::Ptr& con,const ServiceRequest::Ptr& msg)
-            {}
+            {
+                // 判断是上线还是下线
+                // 上线请求
+                std::unique_lock<std::mutex> lock(_mtx);
+                auto optype = msg->serviceOptType();
+                if(optype == ServiceOpType::SERVICE_ONLINE)
+                {
+                    auto it = _method_hosts.find(msg->method());
+                    if(it == _method_hosts.end())
+                    {
+                        auto method_host = std::make_shared<MethodHost>(std::vector<Address_t>());
+                        method_host->appendHost(msg->address());
+                        _method_hosts[msg->method()] = method_host;
+                    }else _method_hosts[msg->method()]->appendHost(msg->address());
+
+                }
+                else if(optype == ServiceOpType::SERVICE_OFFLINE)
+                {
+                    // 下线同志
+                    auto it = _method_hosts.find(msg->method());
+                    if(it == _method_hosts.end()) return;
+                    _method_hosts[msg->method()]->delHost(msg->address());
+                }
+                else 
+                {
+                    // 
+                    ELOG("未知的请求");
+                }
+            }
         private:
             std::mutex _mtx;
             // hash<method,vector<host>>
