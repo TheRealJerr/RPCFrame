@@ -3,7 +3,7 @@
 #pragma once
 
 #include "requestor.hpp"
-
+#include <unordered_set>
 namespace rpcframe
 {
     namespace client
@@ -55,15 +55,35 @@ namespace rpcframe
         {
         public:
             // 完美转发提高效率
-            using Ptr = std::shared_ptr<MethodHost>();
-            template <class Hosts>
-            MethodHost(Hosts&& hosts):
-                _hosts(std::forward<Hosts>(hosts)),_index(0)
+            using Ptr = std::shared_ptr<MethodHost>;
+            MethodHost(const std::vector<Address_t>& hosts):
+                _hosts(hosts.begin(),hosts.end()),_index(0)
             {}
-            void appendHost(const Address_t& addr) { }
-            void delHost(const Address_t& addr) {}
-            bool empty();
-            Address_t chooseAddess();
+            void appendHost(const Address_t& addr) { 
+                std::unique_lock<std::mutex> lock(_mtx);
+                _hosts.push_back(addr);
+            }
+            void delHost(const Address_t& addr) {
+                std::unique_lock<std::mutex> lock(_mtx);
+                for(int i = 0;i < _hosts.size();i++)
+                {
+                    if(addr == _hosts[i])
+                    {
+                        _hosts.erase(_hosts.begin() + i);
+                        return;
+                    }
+                }
+            }
+
+            bool empty() { return _hosts.empty(); }
+
+            Address_t chooseAddess()
+            {
+                std::unique_lock<std::mutex> lock(_mtx);
+                int ret = _index;
+                _index = (_index + 1) % _hosts.size();
+                return _hosts[ret];
+            }
         private:
             std::mutex _mtx;
             size_t _index;
@@ -74,16 +94,61 @@ namespace rpcframe
         {
         public:
         // RR轮转
+            using Ptr = std::shared_ptr<Discoverier>;
             // 通过方法想要获取对应的主机信息，内部采用RR轮转,
-            bool serviceDiscovery(const std::string& method,Address_t& host)
+            bool serviceDiscovery(const BaseConnection::Ptr& con,const std::string& method,Address_t& host)
             {
                 // 可以直接去本地查找
                 // 如果为空,就去构建发现请求
+                std::unique_lock<std::mutex> lock(_mtx);
+                if(_method_hosts.count(method) == 0) 
+                {
+                    // 组织请求今夕你给服务发现
+                    auto msg = MessageFactory::create<ServiceRequest>();
+                    msg->setId(UUIDTool::getUUID());
+                    msg->setMtype(Mtype::REQ_SERVICE);
+                    msg->setMethod(method);
+                    msg->setServiceOptType(ServiceOpType::SERVICE_DISCOVERY);
+                    BaseMessage::Ptr msg_rsp;
+                    auto tmp = std::dynamic_pointer_cast<BaseMessage>(msg);
+                    bool ret = _requestor->send(con,tmp,msg_rsp);
+                    if(ret == false)
+                    {
+                        ELOG("服务发现失败");
+                        return false;
+                    }
+                    auto service_rsp = std::dynamic_pointer_cast<ServiceResponse>(msg_rsp);
+                    if(service_rsp.get() == nullptr)
+                    {
+                        ELOG("响应类型转换失败");
+                        return false;
+                    }
+                    if(service_rsp->rCode() != RCode::RCODE_OK)
+                    {
+                        ELOG("服务发现失败%s",errorCode(service_rsp->rCode()).c_str());
+                        return false;
+                    }
+                    // 注册发现的新的主机
+                    std::unique_lock<std::mutex> lock(_mtx);
+                    auto method_hosts = std::make_shared<MethodHost>(service_rsp->Hosts());
+                    _method_hosts.insert(std::make_pair(method,method_hosts));
+                    if(method_hosts->empty())
+                    {
+                        ELOG("服务发现失败，啥也没有");
+                        return false;
+                    }
+                    host = method_hosts->chooseAddess();
+                    return true;
+                }
+
+                host = _method_hosts[method]->chooseAddess();
+                return true;
             }
             // dispather调用
             void onServiceRequstor(const BaseConnection::Ptr& con,const ServiceRequest::Ptr& msg)
             {}
         private:
+            std::mutex _mtx;
             // hash<method,vector<host>>
             std::unordered_map<std::string,MethodHost::Ptr> _method_hosts;
             Requestor::Ptr _requestor;
