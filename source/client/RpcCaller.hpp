@@ -12,11 +12,11 @@ namespace rpcframe
         {
         public:
             using JsonAsyncReponse = std::future<Json::Value>;
-            using Ptr = std::shared_future<RpcCaller>;
+            using Ptr = std::shared_ptr<RpcCaller>;
             // 通过request发送请求
             using JsonResponseCallBack = std::function<void(const Json::Value&)>;
 
-            RpcCaller(const Requestor::Ptr& requstor):_requestor(requstor)
+            RpcCaller(const client::Requestor::Ptr& requstor):_requestor(requstor)
             {}
 
             // 同步调用

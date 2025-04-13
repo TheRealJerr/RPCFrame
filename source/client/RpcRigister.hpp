@@ -13,7 +13,7 @@ namespace rpcframe
         {
         public:
             using Ptr = std::shared_ptr<Provider>;
-            Provider():_requestor(std::make_shared<Requestor>())
+            Provider(const Requestor::Ptr& requestor):_requestor(requestor)
             {}
             bool rigistMethod(const BaseConnection::Ptr& con,const std::string& method,const Address_t& addr)
             {
@@ -93,8 +93,14 @@ namespace rpcframe
         class Discoverier
         {
         public:
-        // RR轮转
+            using OfflineCallBack = std::function<void(const Address_t&)>;
             using Ptr = std::shared_ptr<Discoverier>;
+
+            Discoverier(const Requestor::Ptr& requestor,const OfflineCallBack& offcb):_requestor(requestor),
+                _offline_callback(offcb)
+            {}
+        // RR轮转
+            
             // 通过方法想要获取对应的主机信息，内部采用RR轮转,
             bool serviceDiscovery(const BaseConnection::Ptr& con,const std::string& method,Address_t& host)
             {
@@ -131,7 +137,7 @@ namespace rpcframe
                     // 注册发现的新的主机
                     std::unique_lock<std::mutex> lock(_mtx);
                     auto method_hosts = std::make_shared<MethodHost>(service_rsp->Hosts());
-                    _method_hosts.insert(std::make_pair(method,method_hosts));
+                    _method_hosts[method] = method_hosts;
                     if(method_hosts->empty())
                     {
                         ELOG("服务发现失败，啥也没有");
@@ -168,6 +174,7 @@ namespace rpcframe
                     auto it = _method_hosts.find(msg->method());
                     if(it == _method_hosts.end()) return;
                     _method_hosts[msg->method()]->delHost(msg->address());
+                    _offline_callback(msg->address());
                 }
                 else 
                 {
@@ -176,6 +183,7 @@ namespace rpcframe
                 }
             }
         private:
+            OfflineCallBack _offline_callback;// 下线回调
             std::mutex _mtx;
             // hash<method,vector<host>>
             std::unordered_map<std::string,MethodHost::Ptr> _method_hosts;
