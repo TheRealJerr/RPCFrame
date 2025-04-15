@@ -123,6 +123,7 @@ namespace rpcframe
                         ELOG("服务发现失败");
                         return false;
                     }
+                    ELOG("获取信息成功");
                     auto service_rsp = std::dynamic_pointer_cast<ServiceResponse>(msg_rsp);
                     if(service_rsp.get() == nullptr)
                     {
@@ -135,7 +136,7 @@ namespace rpcframe
                         return false;
                     }
                     // 注册发现的新的主机
-                    std::unique_lock<std::mutex> lock(_mtx);
+
                     auto method_hosts = std::make_shared<MethodHost>(service_rsp->Hosts());
                     _method_hosts[method] = method_hosts;
                     if(method_hosts->empty())

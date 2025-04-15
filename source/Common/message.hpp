@@ -330,7 +330,7 @@ namespace rpcframe
         // {
         //     body()[KEY_RESULT] = rsl;
         // }
-    private:
+    
     };
     class ServiceResponse : public JsonResponse
     {

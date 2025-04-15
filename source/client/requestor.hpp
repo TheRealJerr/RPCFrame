@@ -1,5 +1,6 @@
 // 这个头文件的作用的发送请求和Serivce处理相应
 #pragma once
+#pragma once
 #include <iostream>
 #include "../Common/detail.hpp"
 #include "../Common/message.hpp"
@@ -46,7 +47,7 @@ namespace rpcframe
                 if(describe->type == RType::REQ_ASYNC)
                 {
                     // 异步处理
-                    ELOG("处理异步请求");
+                    // ELOG("处理异步请求");
                     describe->response.set_value(msg);
                 }else if(describe->type == RType::REQ_CALLBACK)
                 {
@@ -87,9 +88,9 @@ namespace rpcframe
             {
             
                 AsyncResponse async_val;
-                ELOG("发送同步请求");
+                // ELOG("发送同步请求");
                 if(send(con,msg,async_val) == false) return false;
-                ELOG("正在等待...(同步请求)");
+                // ELOG("正在等待...(同步请求)");
                 ret = async_val.get(); // 阻塞的等待
                 return true;
             }
@@ -107,7 +108,7 @@ namespace rpcframe
                     return false;
                 }
                 con->send(msg);
-                ELOG("正在等待...(回调等待)");
+                // ELOG("正在等待...(回调等待)");
                 return true;
             }
         private:

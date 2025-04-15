@@ -1,5 +1,5 @@
 // 这里我们实现的是多种客户端的实现
-
+#pragma once
 #include "../Common/message.hpp"
 #include "../Common/net.hpp"
 #include "requestor.hpp"
@@ -51,14 +51,15 @@ namespace rpcframe
             DisClient(const Address_t &rigaddr,const Discoverier::OfflineCallBack& offcb) : _requestor(std::make_shared<Requestor>()),
                                                   _dispatcher(std::make_shared<DisPatcher>()),
                                                   _discoverier(std::make_shared<Discoverier>(_requestor,offcb)),
-                                                  _client(ClientFactory::create(rigaddr.first, rigaddr.second)),
                                                   _host(rigaddr)
             {
                 auto cb = std::bind(&rpcframe::client::Requestor::onResponse, _requestor.get(), std::placeholders::_1, std::placeholders::_2);
                 _dispatcher->rigisterHandler<rpcframe::BaseMessage>(rpcframe::Mtype::RSP_SERVICE, cb);
                 auto req_cb = std::bind(&client::Discoverier::onServiceRequstor, _discoverier.get(), std::placeholders::_1, std::placeholders::_2);
                 _dispatcher->rigisterHandler<rpcframe::ServiceRequest>(rpcframe::Mtype::REQ_SERVICE, req_cb);
+                _client = ClientFactory::create(rigaddr.first, rigaddr.second);
                 _client->setMessageCallBack(std::bind(&rpcframe::DisPatcher::onMessage, _dispatcher.get(), std::placeholders::_1, std::placeholders::_2));
+                
                 _client->connect();
             }
             // 发现服务
@@ -94,7 +95,7 @@ namespace rpcframe
         
         class RpcClient
         {
-        private:
+        public:
             RpcClient(bool enableDiscovery, const Address_t &rigaddr) :                                     // 是否启用服务发现功能
                                                                                                             // 同时也决定了rigaddr是服务提供者的地址 / 注册中心的地址进行发现
                                                                         _enable_discovery(enableDiscovery), // 是否进行服务的发现
@@ -103,7 +104,7 @@ namespace rpcframe
                                                                         _caller(std::make_shared<RpcCaller>(_requestor))
             {
                 auto cb = std::bind(&rpcframe::client::Requestor::onResponse, _requestor.get(), std::placeholders::_1, std::placeholders::_2);
-                _dispatcher->rigisterHandler<rpcframe::BaseMessage>(rpcframe::Mtype::RSP_SERVICE, cb);
+                _dispatcher->rigisterHandler<rpcframe::BaseMessage>(rpcframe::Mtype::RSP_RPC, cb);
 
                 // 构建连接
                 if (_enable_discovery == true)
@@ -126,6 +127,7 @@ namespace rpcframe
             // 相仿rpccaller接口制定了三种不同的访问的方式
             // 同步调用
             // 找到服务提供者  --  固定服务提供者
+
             bool call(const std::string method, const Json::Value &params, Json::Value &result)
             {
                 BaseClient::Ptr client;
@@ -152,7 +154,7 @@ namespace rpcframe
                     // 直接获取默认的连接
                     client = _client;
                 }
-                _caller->call(client->connection(),method,params,result);
+                return _caller->call(client->connection(),method,params,result);
             }
             // 异步调用
             bool call(const std::string method, const Json::Value &params, RpcCaller::JsonAsyncReponse &result)
@@ -181,7 +183,7 @@ namespace rpcframe
                     // 直接获取默认的连接
                     client = _client;
                 }
-                _caller->call(client->connection(),method,params,result);
+                return _caller->call(client->connection(),method,params,result);
             }
             // 设置回调函数
             bool call(const std::string method, const Json::Value &params, const RpcCaller::JsonResponseCallBack &callback)
@@ -210,11 +212,13 @@ namespace rpcframe
                     // 直接获取默认的连接
                     client = _client;
                 }
-                _caller->call(client->connection(),method,params,callback);
+                return _caller->call(client->connection(),method,params,callback);
             }
 
             BaseClient::Ptr createNewClient(const Address_t& addr)
             {
+                // 进行服务发现
+                ELOG("本地没有缓存进行服务发现");
                 BaseClient::Ptr client = rpcframe::ClientFactory::create(addr.first, addr.second);
 
                 client->setMessageCallBack(std::bind(&rpcframe::DisPatcher::onMessage, _dispatcher.get(), std::placeholders::_1, std::placeholders::_2));

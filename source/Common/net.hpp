@@ -289,7 +289,7 @@ namespace rpcframe
 
         void onMessage(const muduo::net::TcpConnectionPtr &con, muduo::net::Buffer *buffer, muduo::Timestamp)
         {
-            DLOG("有新数据到来,开始处理");
+            // DLOG("有新数据到来,开始处理");
             auto base_buf = BufferFactory::create(buffer);
 
             while (true)
@@ -303,7 +303,7 @@ namespace rpcframe
                         return;
                     }
                     // 数据不足
-                    DLOG("数据量不足");
+                    // DLOG("数据量不足");
                     return;
                 }
 
@@ -315,7 +315,7 @@ namespace rpcframe
                     con->shutdown();
                     return;
                 }
-                DLOG("缓冲区中数据可处理");
+                // DLOG("缓冲区中数据可处理");
                 BaseConnection::Ptr base_con;
                 {
                     std::unique_lock<std::mutex> lock(_mtx);
@@ -327,7 +327,7 @@ namespace rpcframe
                     }
                     base_con = it->second;
                 }
-                DLOG("调用回调函数进行消息处理");
+                // DLOG("调用回调函数进行消息处理");
                 if (_msg_call_back)
                     _msg_call_back(base_con, msg);
             }
@@ -374,9 +374,7 @@ namespace rpcframe
             _client.setMessageCallback(std::bind(&MuduoClient::onMessage, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
             // 连接服务器
             _client.connect();
-            ELOG("开始等待");
             _countdownlatch.wait(); // 等待connect
-            ELOG("等待连接成功");
         }
         virtual void shutdown() override
         {

@@ -125,7 +125,6 @@ namespace rpcframe
                 std::mutex mtx_;
                 using Ptr = std::shared_ptr<Discovery>;
                 BaseConnection::Ptr _con; // 连接
-                using Ptr = std::shared_ptr<Discovery>;
                 // 注意这里一定是外部能够访问的地址而不是监听的地址
                 std::vector<std::string> _mothods; // 发现过的服务的名称
                 void appendMethod(const std::string &method)
@@ -217,6 +216,7 @@ namespace rpcframe
                 _providers(std::make_shared<ProviderManager>()),
                 _discoverys(std::make_shared<DiscoverManager>())
             {}
+            // 服务调用的回调函数
             void onServiceRequest(const BaseConnection::Ptr &con, const ServiceRequest::Ptr &msg)
             {
                 ServiceOpType opt_type = msg->serviceOptType();
@@ -224,6 +224,7 @@ namespace rpcframe
                 // 1. 新增服务提供者, 进行服务发现的通知
                 if(opt_type == ServiceOpType::SERVICE_REGISTY)
                 {
+                    ILOG("%s:%d注册了服务:%s",msg->address().first.c_str(),(int)msg->address().second,msg->method().c_str());
                     _providers->addProvider(con,msg->address(),msg->method());
                     _discoverys->onlineNotify(msg->method(),msg->address()); // 上限通知
                     return rigisterResponse(con,msg);
@@ -231,6 +232,7 @@ namespace rpcframe
                 // 2. 新增的服务发现
                 else if(opt_type == ServiceOpType::SERVICE_DISCOVERY)
                 {
+                    ILOG("%s:%d进行了服务发现",msg->address().first.c_str(),(int)msg->address().second);
                     _discoverys->addDiscovery(con,msg->method());
                     return discoverResponse(con,msg);
                 }
@@ -248,6 +250,7 @@ namespace rpcframe
                 auto provider = _providers->getProvider(con);
                 if(provider.get())
                 {
+                    ILOG("%s:%d下线了服务",provider->_host.first.c_str(),(int)provider->_host.second)
                     // 他就是一个服务提供者
                     for(auto& method : provider->_mothods)
                     {
@@ -285,6 +288,7 @@ namespace rpcframe
                 msg_rsp->setRCode(RCode::RCODE_OK);
                 msg_rsp->setMethod(msg->method());
                 msg_rsp->setHost(hosts);
+                ELOG("存在%s方法",msg->method().c_str());
                 con->send(msg_rsp);
             }
 

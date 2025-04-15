@@ -45,7 +45,7 @@ namespace rpcframe
                     ELOG("同步rpc请求失败");
                     return false;
                 }
-                else ELOG("同步rpc请求成功");
+                
                 auto t = std::dynamic_pointer_cast<RpcResponse>(rsp_msg);
                 if(!t)
                 {

@@ -1,5 +1,6 @@
 // 对Rpc消息进行派发的模块
 #pragma once
+#pragma once
 #include <iostream>
 #include "../Common/detail.hpp"
 #include "../Common/message.hpp"
@@ -171,13 +172,13 @@ namespace rpcframe
         class RpcRouter
         {
         public:
-            using Ptr = std::shared_ptr<RpcRequest>;
+            using Ptr = std::shared_ptr<RpcRouter>;
             // 注册到dispatcher针对rpc请求进行回调处理的业务函数
             // constructor
             RpcRouter() : _service_manager(std::make_shared<ServiceManager>())
             {}
 
-            void onRpcRequest(const BaseConnection::Ptr &con, RpcRequest::Ptr &req)
+            void onRpcRequest(const BaseConnection::Ptr &con,RpcRequest::Ptr &req)
             {
                 
                 // 1. 判断当前服务端能否提供服务
