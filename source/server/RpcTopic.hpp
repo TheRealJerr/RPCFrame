@@ -84,6 +84,7 @@ namespace rpcframe
                 std::string topic_name = msg->topicKey();
                 auto topic = std::make_shared<Topic>(topic_name);
                 _topics.insert({ topic_name,topic }); // make_pair  
+                ELOG("%s主题创建成功",topic_name.c_str());
             }
             // 主题的删除
             void removeTopic(const BaseConnection::Ptr& con,TopicRequest::Ptr& msg)
@@ -132,9 +133,14 @@ namespace rpcframe
                     std::unique_lock<std::mutex> lock(_mtx);
                     if(_topics.count(msg->topicKey()) == 0) return false;
                     topic = _topics[msg->topicKey()];
-                    if(_subscribes.count(con) == 0) return false;
-                    subscribe = _subscribes[con];
+                    if(_subscribes.count(con) == 0) 
+                    {
+                        subscribe = std::make_shared<Subscribe>(con);
+                        _subscribes.insert(std::make_pair(con,subscribe));
+                    }
+                    else subscribe = _subscribes[con];
                 }
+                ELOG("%s主题订阅成功",msg->topicKey().c_str());
                 // 找到了主题对象和订阅者对象
                 topic->appendNewSubscribe(subscribe);
                 subscribe->appendNewTopic(msg->topicKey());
@@ -162,12 +168,19 @@ namespace rpcframe
             // 主题的消息发布
             bool publishTopic(const BaseConnection::Ptr& con,TopicRequest::Ptr& msg)
             {
+                ELOG("请求订阅%s主题",msg->topicKey().c_str());
                 Topic::Ptr topic;
                 {
                     std::unique_lock<std::mutex> lock(_mtx);
-                    if(_topics.count(msg->topicKey()) == 0) return false; // 没找到
+                    auto it = _topics.find(msg->topicKey());
+                    if(it == _topics.end())
+                    {
+                        ELOG("不存在%s主题",msg->topicKey().c_str());
+                        return false;
+                    }
                     topic = _topics[msg->topicKey()]; 
-                }                
+                }    
+
                 topic->pushMessage(msg);
                 return true;
             }

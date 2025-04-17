@@ -15,36 +15,38 @@ namespace rpcframe
             TopicManager(const Requestor::Ptr& requestor) : _requestor(requestor)
             {}
 
-            bool createTopic(const BaseConnection::Ptr& con,std::string& method)
+            bool createTopic(const BaseConnection::Ptr& con,const std::string& method)
             {
                 // 构造请求
                 return sendMessage(con,method,TopicOptType::TOPIC_CREATE);
             }
 
-            bool removeTopic(const BaseConnection::Ptr& con,std::string& method)
+            bool removeTopic(const BaseConnection::Ptr& con,const std::string& method)
             {
                 return sendMessage(con,method,TopicOptType::TOPIC_REMOVE);
             }
 
-            bool subscribeTopic(const BaseConnection::Ptr& con,std::string& method,const SubCallBack& cb)
+            bool subscribeTopic(const BaseConnection::Ptr& con,const std::string& method,const SubCallBack& cb)
             {
                 appendSubscribe(method,cb);
                 bool ret = sendMessage(con,method,TopicOptType::TOPIC_SUBCRIBE);
                 if(ret == false)
                 {
+                    ELOG("订阅请求失败");
                     removeSubscribe(method);
                     return false;
                 }
+                ELOG("订阅成功");
                 return true;
             }
 
-            bool cancelTopic(const BaseConnection::Ptr& con,std::string& method)
+            bool cancelTopic(const BaseConnection::Ptr& con,const std::string& method)
             {
                 removeSubscribe(method);
                 return sendMessage(con,method,TopicOptType::TOPIC_CANCEL);
             }
 
-            bool publishTopic(const BaseConnection::Ptr& con,std::string& method,const std::string& msg)
+            bool publishTopic(const BaseConnection::Ptr& con,const std::string& method,const std::string& msg)
             {
                 return sendMessage(con,method,TopicOptType::TOPIC_PUBLISH,msg);
             }
@@ -70,18 +72,18 @@ namespace rpcframe
             }
 
         private:
-            void appendSubscribe(std::string& method,const SubCallBack& cb)
+            void appendSubscribe(const std::string& method,const SubCallBack& cb)
             {
                 std::unique_lock<std::mutex> lock(_mtx);
                 _topic_callbacks.insert(std::make_pair(method,cb));
             }
-            void removeSubscribe(std::string& method)
+            void removeSubscribe(const std::string& method)
             {
                 std::unique_lock<std::mutex> lock(_mtx);
                 _topic_callbacks.erase(method);
             }
 
-            const SubCallBack& getCallBack(std::string& method)
+            SubCallBack getCallBack(const std::string& method)
             {
                 std::unique_lock<std::mutex> lock(_mtx);
                 if(_topic_callbacks.count(method) == 0) return SubCallBack();

@@ -70,7 +70,6 @@ namespace rpcframe
                 // 构造发现请求
                 return _discoverier->serviceDiscovery(_client->connection(), method, addr);
             }
-
         private:
             Requestor::Ptr _requestor; // 请求的管理
             DisPatcher::Ptr _dispatcher;
@@ -246,6 +245,10 @@ namespace rpcframe
                 std::unique_lock<std::mutex> lock(_mtx);
                 _rpc_clients.erase(host);
             }
+            void shutDown()
+            {
+                _client->shutdown();
+            }
         private:
             bool _enable_discovery;
             DisClient::Ptr _dis_client; // 发现客户端
@@ -262,6 +265,7 @@ namespace rpcframe
         class TopicClient
         {
         public:
+            using Ptr = std::shared_ptr<TopicClient>;
             TopicClient(const Address_t& rigaddr) : 
                 _requestor(std::make_shared<Requestor>()),
                 _dispatcher(std::make_shared<DisPatcher>()),
@@ -279,31 +283,35 @@ namespace rpcframe
                 _client->setMessageCallBack(std::bind(&rpcframe::DisPatcher::onMessage, _dispatcher.get(), std::placeholders::_1, std::placeholders::_2));
                 _client->connect();
             }
-            bool createTopic(std::string& method)
+            bool createTopic(const std::string& method)
             {
                 return _topic_manager->createTopic(_client->connection(),method);
             }
 
-            bool removeTopic(std::string& method)
+            bool removeTopic(const std::string& method)
             {   
                 return _topic_manager->removeTopic(_client->connection(),method);
             }
 
-            bool subscribeTopic(std::string& method,const TopicManager::SubCallBack& cb)
+            bool subscribeTopic(const std::string& method,const TopicManager::SubCallBack& cb)
             {
                 return _topic_manager->subscribeTopic(_client->connection(),method,cb);
             }
 
-            bool cancelTopic(std::string& method)
+            bool cancelTopic(const std::string& method)
             {
                 return _topic_manager->cancelTopic(_client->connection(),method);
             }
 
-            bool publishTopic(std::string& method,const std::string& msg)
+            bool publishTopic(const std::string& method,const std::string& msg)
             {
                 return _topic_manager->publishTopic(_client->connection(),method,msg);
             }   
 
+            void shutDown()
+            {
+                _client->shutdown();
+            }
         private:
             Requestor::Ptr _requestor;  // 请求的管理
             DisPatcher::Ptr _dispatcher;
