@@ -5,8 +5,7 @@
 #include "RpcRouter.hpp"
 #include "RpcRigister.hpp"
 #include "../client/RpcClient.hpp"
-
-
+#include "../Common/message.hpp"
 // 向外提供主题操控的接口
 namespace rpcframe
 {
@@ -16,7 +15,7 @@ namespace rpcframe
         class PtrHash
         {
         public:
-            size_t operator()(const shared_ptr<T>& ptr) const 
+            size_t operator()(const std::shared_ptr<T>& ptr) const 
             {
                 return _hash(ptr.get());
             }
@@ -28,6 +27,7 @@ namespace rpcframe
         public:
             using Ptr = std::shared_ptr<TopicManager>;
             // 接收到了主题的消息
+            // 这个接口解释给dispatcher模块设计的
             void onTopicMessage(const BaseConnection::Ptr& con,TopicRequest::Ptr& msg)
             {
                 // 主题的创建
@@ -45,42 +45,37 @@ namespace rpcframe
                     case TopicOptType::TOPIC_SUBCRIBE : ret = subscribeTopic(con,msg); break;
                     case TopicOptType::TOPIC_CANCEL : ret = cancelRemoveTopic(con,msg); break;
                     case TopicOptType::TOPIC_PUBLISH : ret = publishTopic(con,msg); break;
-                    default : ELOG("topicoptype error: 未知的主题操作类型"); break;
+                    default : ELOG("topicoptype error: 未知的主题操作类型"); return errorResponse(con,msg,RCode::RCODE_INVALID_OPTYPE);
                 }
                 // 组织回复请求
-                // ret = false; 没有对应的主题
-                if(ret)
-                {
+                // ret = false; 没有对应的主题 
+                if(ret) return topicResponse(con,msg);
 
-                }
-                else
-                {
+                else return errorResponse(con,msg,RCode::RCODE_NOT_FIND_TOPIC);
 
-                }
             }
 
             // 订阅者连接断开,删除内部维护的订阅者的信息
-            void onShutDown(const BaseConnection::Ptr& con);
-        private:
-            void TopicResponse(const BaseConnection::Ptr &con, const TopicRequest::Ptr &msg,RCode rcode)
+            void onShutDown(const BaseConnection::Ptr& con)
             {
-                auto msg_rsp = MessageFactory::create<TopicResponse>();
-                msg_rsp->setId(msg->rid());
-                msg_rsp->setMtype(MType::);
-                msg_rsp->setRCode(rcode);
-                msg_rsp->setServiceOpType(ServiceOpType::SERVICE_REGISTY);
-                con->send(msg_rsp);
-            }
+                // 消息订阅者,订阅者断开连接后
+                // 获取到订阅者关联的所有的主题,从对应的主题对象中删除订阅者
+                std::vector<Topic::Ptr> topics;
+                Subscribe::Ptr subscribe;
+                {
+                    std::unique_lock<std::mutex> lock(_mtx);
+                    if(_subscribes.count(con) == 0) return; // 不是订阅者的连接
+                    subscribe = _subscribes[con];
+                    for(auto& topic_name : subscribe->getTopics())
+                        if(_topics.count(topic_name) > 0) topics.push_back(_topics[topic_name]);
+                    // 从订阅者中删除
+                    _subscribes.erase(con); // 将订阅者对象删除
+                }
+                for(auto& topic : topics)
+                    topic->removeSubscribe(subscribe);
 
-            void errorResponse(const BaseConnection::Ptr& con,const TopicRequest::Ptr& msg,RCode rcode)
-            {
-                TopicResponse::Ptr msg_rsp = std::make_shared<TopicResponse>();
-                msg_rsp->setId(msg->rid());
-                msg_rsp->setMtype(Mtype::RSP_SERVICE);
-                msg_rsp->setRCode(rcode);
-                
-                con->send(msg_rsp);
             }
+            
             // 主题的创建
             void createTopic(const BaseConnection::Ptr& con,TopicRequest::Ptr& msg)
             {
@@ -106,6 +101,25 @@ namespace rpcframe
                 }
                 for(auto& scr : subscribes)
                     scr->removeTopic(topic_name);
+            }
+        private:
+            void topicResponse(const BaseConnection::Ptr &con, const TopicRequest::Ptr &msg)
+            {
+                auto msg_rsp = MessageFactory::create<TopicResponse>();
+                msg_rsp->setId(msg->rid());
+                msg_rsp->setMtype(Mtype::RSP_TOP);
+                msg_rsp->setRCode(RCode::RCODE_OK);
+                con->send(msg_rsp);
+            }
+
+            
+            void errorResponse(const BaseConnection::Ptr& con,const TopicRequest::Ptr& msg,RCode rcode)
+            {
+                auto msg_rsp = MessageFactory::create<TopicResponse>();
+                msg_rsp->setId(msg->rid());
+                msg_rsp->setMtype(Mtype::RSP_TOP);
+                msg_rsp->setRCode(rcode);
+                con->send(msg_rsp);
             }
             // 主题的订阅
             bool subscribeTopic(const BaseConnection::Ptr& con,TopicRequest::Ptr& msg)
@@ -169,6 +183,8 @@ namespace rpcframe
                 std::mutex _mtx;
                 //
             public:
+                const std::unordered_set<std::string>& getTopics() const { return _topics; }
+
                 using Ptr = std::shared_ptr<Subscribe>;
                 Subscribe(const BaseConnection::Ptr& con) : _con(con)
                 {}
@@ -217,6 +233,7 @@ namespace rpcframe
                         subscribe->getCon()->send(msg);
                     }
                 }
+                
             };
 
         private:

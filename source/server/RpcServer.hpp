@@ -4,8 +4,9 @@
 #include "../Common/dispatcher.hpp"
 #include "RpcRouter.hpp"
 #include "RpcRigister.hpp"
+#include "RpcTopic.hpp"
 #include "../client/RpcClient.hpp"
-
+#include <atomic>
 namespace rpcframe
 {
     namespace server
@@ -111,5 +112,46 @@ namespace rpcframe
             // 注册的客户端
             rpcframe::client::RigClient::Ptr _rig_client;
         };
+        class TopicServer
+        {
+        public:
+            using Ptr = std::shared_ptr<TopicServer>;
+            TopicServer(int port):
+                _dispatcher(std::make_shared<DisPatcher>()),
+                _topic_manager(std::make_shared<TopicManager>())
+            {
+                auto cb = [topic_manager = _topic_manager](const BaseConnection::Ptr &con, TopicRequest::Ptr &msg)->void
+                {
+                    topic_manager->onTopicMessage(con,msg);
+                };
+                _dispatcher->rigisterHandler<TopicRequest>(Mtype::REQ_TOP,cb);
+                auto sv_cb = [dispatcher = _dispatcher](const BaseConnection::Ptr& con,BaseMessage::Ptr& msg)
+                {
+                    dispatcher->onMessage(con,msg);
+                };
+                auto cls_cb = [topic_manager = _topic_manager](const BaseConnection::Ptr& con)
+                {
+                    topic_manager->onShutDown(con);
+                };
+                _server = ServerFactory::create(port);
+                _server->setMessageCallBack(sv_cb);
+                _server->setCloseCallBack(cls_cb);
+                
+            }
+            void start()
+            {
+                _server->start();
+            }
+        private:
+            
+        private:
+            BaseServer::Ptr _server; // 服务端
+            DisPatcher::Ptr _dispatcher;// 任务派发器
+            TopicManager::Ptr _topic_manager; // provider和descoverier的管理者
+            
+        };
+
     }
 }
+
+

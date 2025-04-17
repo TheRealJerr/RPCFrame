@@ -6,6 +6,7 @@
 #include "RpcCaller.hpp"
 #include "../Common/dispatcher.hpp"
 #include "RpcRigister.hpp"
+#include "RpcTopic.hpp"
 
 namespace rpcframe
 {
@@ -256,6 +257,58 @@ namespace rpcframe
             // hash<method,方法组>
             // [110.14.41.69:9090 : cons]
             std::unordered_map<Address_t,BaseClient::Ptr,AddressHash> _rpc_clients; // 服务发现的客户端连接池
+        };
+
+        class TopicClient
+        {
+        public:
+            TopicClient(const Address_t& rigaddr) : 
+                _requestor(std::make_shared<Requestor>()),
+                _dispatcher(std::make_shared<DisPatcher>()),
+                _topic_manager(std::make_shared<TopicManager>(_requestor))
+            {
+                auto cb = std::bind(&rpcframe::client::Requestor::onResponse, _requestor.get(), std::placeholders::_1, std::placeholders::_2);
+                _dispatcher->rigisterHandler<rpcframe::BaseMessage>(rpcframe::Mtype::RSP_TOP, cb);
+
+                auto msg_cb = [topic_manager = _topic_manager](const BaseConnection::Ptr& con,TopicRequest::Ptr& msg)->void
+                {
+                    topic_manager->onPublish(con,msg);
+                };
+                _dispatcher->rigisterHandler<rpcframe::TopicRequest>(Mtype::REQ_TOP,msg_cb);
+                _client = rpcframe::ClientFactory::create(rigaddr.first, rigaddr.second);
+                _client->setMessageCallBack(std::bind(&rpcframe::DisPatcher::onMessage, _dispatcher.get(), std::placeholders::_1, std::placeholders::_2));
+                _client->connect();
+            }
+            bool createTopic(std::string& method)
+            {
+                return _topic_manager->createTopic(_client->connection(),method);
+            }
+
+            bool removeTopic(std::string& method)
+            {   
+                return _topic_manager->removeTopic(_client->connection(),method);
+            }
+
+            bool subscribeTopic(std::string& method,const TopicManager::SubCallBack& cb)
+            {
+                return _topic_manager->subscribeTopic(_client->connection(),method,cb);
+            }
+
+            bool cancelTopic(std::string& method)
+            {
+                return _topic_manager->cancelTopic(_client->connection(),method);
+            }
+
+            bool publishTopic(std::string& method,const std::string& msg)
+            {
+                return _topic_manager->publishTopic(_client->connection(),method,msg);
+            }   
+
+        private:
+            Requestor::Ptr _requestor;  // 请求的管理
+            DisPatcher::Ptr _dispatcher;
+            BaseClient::Ptr _client;
+            TopicManager::Ptr _topic_manager;
         };
     }
 }
