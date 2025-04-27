@@ -177,7 +177,6 @@ namespace bitrpc {
                     std::mutex _mutex;
                     std::string topic_name;
                     std::unordered_set<Subscriber::ptr> subscribers; //当前主题的订阅者
-
                     Topic(const std::string &name) : topic_name(name){}
                     //新增订阅的时候调用
                     void appendSubscriber(const Subscriber::ptr &subscriber) {

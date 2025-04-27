@@ -20,14 +20,4 @@ c++实现的基于jsoncpp的RPC框架
 
 ### NetWork
 
-基于moduo库实现网络通信
-
-### Dispatch
-
-|---|---|
-|消息类型|回调函数|
-|type|handler|
-
-### protocal
-
-/Lenth/Mtype/Id(unique)/
+网络层引用陈硕的muduo库,多线程处理高并发场景
